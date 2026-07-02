@@ -46,7 +46,13 @@ const ChatBot = () => {
       }
 
       if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Invalid API response (not JSON)");
+        const raw = await res.text();
+        throw new Error(
+          `Invalid API response (not JSON). Status: ${res.status}. First 200 chars: ${raw.slice(
+            0,
+            200
+          )}`
+        );
       }
 
       const data = await res.json();
