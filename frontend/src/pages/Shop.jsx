@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import ProductCard from '../components/ProductCard';
 import '../styles/product.css';
 
+const API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 const Shop = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,30 +13,35 @@ const Shop = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/products');
+        const res = await fetch(`${API_URL}/api/products`);
         const data = await res.json();
         setProducts(data);
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching products:", error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchProducts();
   }, []);
 
-  const filteredProducts = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="shop-container">
       <h2>All Products</h2>
-      <input 
-        type="text" 
-        placeholder="Search products..." 
+
+      <input
+        type="text"
+        placeholder="Search products..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="search-bar"
       />
+
       {loading ? (
         <div>Loading...</div>
       ) : (
