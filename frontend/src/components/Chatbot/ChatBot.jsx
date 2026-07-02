@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import "./ChatBot.css";
 
-const API_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const ChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [messages, setMessages] = useState([
     {
@@ -17,32 +17,39 @@ const ChatBot = () => {
   const [input, setInput] = useState("");
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const userMessage = input;
 
     setMessages((prev) => [
       ...prev,
-      {
-        sender: "user",
-        text: userMessage,
-      },
+      { sender: "user", text: userMessage },
     ]);
 
     setInput("");
+    setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/ai/chat`, {
+      const res = await fetch(`${API_URL}/api/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: userMessage,
-        }),
+        body: JSON.stringify({ message: userMessage }),
       });
 
-      const data = await response.json();
+      // ❌ prevent HTML crash (Unexpected token <)
+      const contentType = res.headers.get("content-type");
+
+      if (!res.ok) {
+        throw new Error("Server Error");
+      }
+
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Invalid API response (not JSON)");
+      }
+
+      const data = await res.json();
 
       setMessages((prev) => [
         ...prev,
@@ -52,7 +59,7 @@ const ChatBot = () => {
         },
       ]);
     } catch (error) {
-      console.error(error);
+      console.error("ChatBot Error:", error);
 
       setMessages((prev) => [
         ...prev,
@@ -61,6 +68,8 @@ const ChatBot = () => {
           text: "❌ Unable to connect to AI server.",
         },
       ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -109,6 +118,7 @@ const ChatBot = () => {
                         ? "rgb(74, 62, 183)"
                         : "rgb(194, 94, 125)",
                     color: "#fff",
+                    opacity: loading && msg.sender === "ai" ? 0.7 : 1,
                   }}
                 >
                   {msg.text}
@@ -122,15 +132,16 @@ const ChatBot = () => {
               type="text"
               placeholder="Type your message..."
               value={input}
+              disabled={loading}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSend();
-                }
+                if (e.key === "Enter") handleSend();
               }}
             />
 
-            <button onClick={handleSend}>➤</button>
+            <button onClick={handleSend} disabled={loading}>
+              {loading ? "..." : "➤"}
+            </button>
           </div>
         </div>
       )}

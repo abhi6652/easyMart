@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import ProductCard from '../components/ProductCard';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -8,15 +10,26 @@ const Home = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch('/api/products');
+        const res = await fetch(`${API_URL}/api/products`);
+
+        // ❌ HTML crash protection
+        const contentType = res.headers.get("content-type");
+
+        if (!res.ok || !contentType?.includes("application/json")) {
+          throw new Error("Invalid API response");
+        }
+
         const data = await res.json();
-        setProducts(data.slice(0, 4)); // Featured products
+
+        setProducts(Array.isArray(data) ? data.slice(0, 4) : []);
       } catch (error) {
-        console.error(error);
+        console.error("Products Fetch Error:", error);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
     };
+
     fetchProducts();
   }, []);
 
@@ -26,9 +39,13 @@ const Home = () => {
         <h1>Welcome to easyMart</h1>
         <p>Discover the best products at unbeatable prices.</p>
       </div>
-      <h2 >Featured Products</h2>
+
+      <h2>Featured Products</h2>
+
       {loading ? (
         <div>Loading...</div>
+      ) : products.length === 0 ? (
+        <div>No products found</div>
       ) : (
         <div className="product-grid">
           {products.map((product) => (

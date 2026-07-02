@@ -2,9 +2,11 @@ import React, { useEffect, useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useParams, useNavigate } from "react-router-dom";
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const EditProduct = () => {
   const { id } = useParams();
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -24,285 +26,226 @@ const EditProduct = () => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // ================= FETCH PRODUCT =================
   useEffect(() => {
+    if (!id) return;
+
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`/api/products/${id}`);
+        const res = await fetch(`${API_URL}/api/products/${id}`);
+
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch product");
+        }
+
         const data = await res.json();
 
         setFormData({
           name: data.name || "",
           description: data.description || "",
-          price: data.price || "",
+          price: data.price ?? "",
           category: data.category || "",
           brand: data.brand || "",
           ram: data.ram || "",
           storage: data.storage || "",
           processor: data.processor || "",
           battery: data.battery || "",
-          tags: data.tags ? data.tags.join(",") : "",
-          stock: data.stock || "",
+          tags: Array.isArray(data.tags) ? data.tags.join(",") : "",
+          stock: data.stock ?? "",
         });
       } catch (error) {
-        console.error(error);
+        console.error("Product Fetch Error:", error);
       }
     };
 
     fetchProduct();
-  }, [id]);
+  }, [id, logout]);
 
+  // ================= SUBMIT =================
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
 
-    const data = new FormData();
-
-    data.append("name", formData.name);
-    data.append("description", formData.description);
-    data.append("price", formData.price);
-    data.append("category", formData.category);
-    data.append("brand", formData.brand);
-    data.append("ram", formData.ram);
-    data.append("storage", formData.storage);
-    data.append("processor", formData.processor);
-    data.append("battery", formData.battery);
-    data.append("tags", JSON.stringify(formData.tags.split(",")));
-    data.append("stock", formData.stock);
-
-    if (image) {
-      data.append("image", image);
-    }
-
     try {
-      const res = await fetch(`/api/products/${id}`, {
+      const form = new FormData();
+
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === "tags") {
+          form.append(
+            "tags",
+            JSON.stringify(
+              value
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean)
+            )
+          );
+        } else {
+          form.append(key, value);
+        }
+      });
+
+      if (image) {
+        form.append("image", image);
+      }
+
+      const res = await fetch(`${API_URL}/api/products/${id}`, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${user.token}`,
+          Authorization: `Bearer ${user?.token}`,
         },
-        body: data,
+        body: form,
       });
 
       const response = await res.json();
 
-      if (res.ok) {
-        alert("✅ Product Updated Successfully");
-        navigate("/admin/products");
-      } else {
-        alert(response.message || "Update Failed");
+      if (res.status === 401) {
+        logout();
+        return;
       }
+
+      if (!res.ok) {
+        throw new Error(response.message || "Update failed");
+      }
+
+      alert("✅ Product Updated Successfully");
+      navigate("/admin/products");
     } catch (error) {
-      console.error(error);
-      alert("Something went wrong.");
+      console.error("Update Error:", error);
+      alert(error.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "650px",
-        margin: "40px auto",
-        background: "#18181b",
-        padding: "40px",
-        borderRadius: "12px",
-        border: "1px solid rgba(255,255,255,0.05)",
-      }}
-    >
+    <div style={containerStyle}>
       <h2 style={{ color: "#f97316", marginBottom: "20px" }}>
         Edit Product
       </h2>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "15px",
-        }}
-      >
-        <input
-          type="text"
-          placeholder="Product Name"
-          required
+      <form onSubmit={handleSubmit} style={formStyle}>
+        <input style={inputStyle}
           value={formData.name}
           onChange={(e) =>
             setFormData({ ...formData, name: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Product Name"
         />
 
-        <textarea
-          placeholder="Description"
-          required
-          rows="4"
+        <textarea style={inputStyle}
           value={formData.description}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              description: e.target.value,
-            })
+            setFormData({ ...formData, description: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Description"
         />
 
-        <input
-          type="number"
-          placeholder="Price"
-          required
+        <input style={inputStyle} type="number"
           value={formData.price}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              price: e.target.value,
-            })
+            setFormData({ ...formData, price: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Price"
         />
 
-        <input
-          type="text"
-          placeholder="Category"
-          required
+        <input style={inputStyle}
           value={formData.category}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              category: e.target.value,
-            })
+            setFormData({ ...formData, category: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Category"
         />
 
-        <input
-          type="text"
-          placeholder="Brand"
+        <input style={inputStyle}
           value={formData.brand}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              brand: e.target.value,
-            })
+            setFormData({ ...formData, brand: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Brand"
         />
 
-        <input
-          type="text"
-          placeholder="RAM"
+        <input style={inputStyle}
           value={formData.ram}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              ram: e.target.value,
-            })
+            setFormData({ ...formData, ram: e.target.value })
           }
-          style={inputStyle}
+          placeholder="RAM"
         />
 
-        <input
-          type="text"
-          placeholder="Storage"
+        <input style={inputStyle}
           value={formData.storage}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              storage: e.target.value,
-            })
+            setFormData({ ...formData, storage: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Storage"
         />
 
-        <input
-          type="text"
-          placeholder="Processor"
+        <input style={inputStyle}
           value={formData.processor}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              processor: e.target.value,
-            })
+            setFormData({ ...formData, processor: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Processor"
         />
 
-        <input
-          type="text"
-          placeholder="Battery"
+        <input style={inputStyle}
           value={formData.battery}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              battery: e.target.value,
-            })
+            setFormData({ ...formData, battery: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Battery"
         />
 
-        <input
-          type="text"
-          placeholder="Tags (comma separated)"
+        <input style={inputStyle}
           value={formData.tags}
           onChange={(e) =>
-            setFormData({
-              ...formData,
-              tags: e.target.value,
-            })
+            setFormData({ ...formData, tags: e.target.value })
           }
-          style={inputStyle}
+          placeholder="Tags (comma separated)"
+        />
+
+        <input style={inputStyle} type="number"
+          value={formData.stock}
+          onChange={(e) =>
+            setFormData({ ...formData, stock: e.target.value })
+          }
+          placeholder="Stock"
         />
 
         <input
-          type="number"
-          placeholder="Stock"
-          required
-          value={formData.stock}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              stock: e.target.value,
-            })
-          }
-          style={inputStyle}
+          type="file"
+          onChange={(e) => setImage(e.target.files[0])}
+          style={{ color: "#fff" }}
         />
 
-        <div
-          style={{
-            padding: "15px",
-            border: "1px dashed #f97316",
-            borderRadius: "8px",
-          }}
-        >
-          <label
-            style={{
-              display: "block",
-              marginBottom: "10px",
-              color: "#a1a1aa",
-            }}
-          >
-            Replace Image (Optional)
-          </label>
-
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImage(e.target.files[0])}
-            style={{ color: "#fff" }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="btn"
-          style={{ marginTop: "10px" }}
-        >
+        <button className="btn" disabled={loading}>
           {loading ? "Updating..." : "Update Product"}
         </button>
       </form>
     </div>
   );
+};
+
+// ================= STYLES =================
+const containerStyle = {
+  maxWidth: "650px",
+  margin: "40px auto",
+  background: "#18181b",
+  padding: "40px",
+  borderRadius: "12px",
+  border: "1px solid rgba(255,255,255,0.05)",
+};
+
+const formStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "15px",
 };
 
 const inputStyle = {
