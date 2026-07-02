@@ -38,24 +38,30 @@ const ChatBot = () => {
         body: JSON.stringify({ message: userMessage }),
       });
 
-      // ❌ prevent HTML crash (Unexpected token <)
-      const contentType = res.headers.get("content-type");
+      // Read raw body first to avoid `res.json()` crashing on HTML responses
+      const raw = await res.text();
 
       if (!res.ok) {
-        throw new Error("Server Error");
-      }
-
-      if (!contentType || !contentType.includes("application/json")) {
-        const raw = await res.text();
         throw new Error(
-          `Invalid API response (not JSON). Status: ${res.status}. First 200 chars: ${raw.slice(
+          `Chatbot request failed. Status: ${res.status}. First 200 chars: ${raw.slice(
             0,
             200
           )}`
         );
       }
 
-      const data = await res.json();
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        throw new Error(
+          `Invalid API response (expected JSON). First 200 chars: ${raw.slice(
+            0,
+            200
+          )}`
+        );
+      }
+
 
       setMessages((prev) => [
         ...prev,

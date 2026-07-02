@@ -1,7 +1,5 @@
-# TODO
-
-## Backend order route fix
-- [x] Inspect failing require stack and check orderRoutes.js import path
-- [ ] Update `backend/routes/orderRoutes.js` to require from the correct folder (`../controllers/orderController`)
-- [ ] Restart backend (`npm run dev`) and verify server boots without MODULE_NOT_FOUND
+- [ ] Inspect ChatBot request/response handling and backend AI route
+- [ ] Implement robust non-JSON response handling in ChatBot.jsx
+- [ ] Ensure API_URL points to backend and request path is correct
+- [ ] Run frontend/backend quick test (send chat) and verify no SyntaxError
 
