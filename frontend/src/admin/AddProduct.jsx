@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+const API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const AddProduct = () => {
   const { user } = useContext(AuthContext);
@@ -21,9 +23,7 @@ const AddProduct = () => {
     stock: "",
   });
 
-  // Single Image
   const [image, setImage] = useState(null);
-
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -54,12 +54,10 @@ const AddProduct = () => {
     data.append("processor", formData.processor);
     data.append("battery", formData.battery);
     data.append("tags", JSON.stringify(formData.tags.split(",")));
-
-    // Single image upload
     data.append("image", image);
 
     try {
-      const res = await fetch("/api/products", {
+      const res = await fetch(`${API_URL}/api/products`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -216,8 +214,19 @@ const AddProduct = () => {
           style={inputStyle}
         />
 
-        <div style={{ padding: "15px", border: "1px dashed #f97316" }}>
-          <label style={{ color: "#a1a1aa", display: "block", marginBottom: "10px" }}>
+        <div
+          style={{
+            padding: "15px",
+            border: "1px dashed #f97316",
+          }}
+        >
+          <label
+            style={{
+              color: "#a1a1aa",
+              display: "block",
+              marginBottom: "10px",
+            }}
+          >
             Upload Product Image
           </label>
 
